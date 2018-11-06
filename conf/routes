@@ -1,1 +1,1 @@
-
+GET /api/ping       controllers.ApiController.ping
