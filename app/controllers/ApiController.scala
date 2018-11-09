@@ -1,6 +1,7 @@
 // Make sure it's in the 'controllers' package
 package controllers
 
+import auth.AuthAction
 import javax.inject.{Inject, Singleton}
 import play.api.libs.json.Json
 import play.api.mvc.{AbstractController, ControllerComponents}
@@ -8,7 +9,8 @@ import repositories.DataRepository
 
 @Singleton
 class ApiController @Inject()(cc: ControllerComponents,
-                              dataRepository: DataRepository // NEW
+                              dataRepository: DataRepository,
+                              authAction: AuthAction
                              )
   extends AbstractController(cc) {
 
@@ -19,7 +21,7 @@ class ApiController @Inject()(cc: ControllerComponents,
   }
 
   // Get a single post
-  def getPost(postId: Int) = Action { implicit request =>
+  def getPost(postId: Int) = authAction { implicit request =>
     dataRepository.getPost(postId) map { post =>
       // If the post was found, return a 200 with the post data as JSON
       Ok(Json.toJson(post))
@@ -27,7 +29,7 @@ class ApiController @Inject()(cc: ControllerComponents,
   }
 
   // Get comments for a post
-  def getComments(postId: Int) = Action { implicit request =>
+  def getComments(postId: Int) = authAction { implicit request =>
     // Simply return 200 OK with the comment data as JSON.
     Ok(Json.toJson(dataRepository.getComments(postId)))
   }
