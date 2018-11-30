@@ -1,6 +1,6 @@
 # Build and Secure a Scala Play Framework API
 
-This is the companion code project for the Build and Secure a Scala Play Framework API blog post @ [auth0.com/blog](https://auth0.com/blog/).
+This is the companion code project for the [Build and Secure a Scala Play Framework API blog post](https://auth0.com/blog/build-and-secure-a-scala-play-framework-api/) @ [auth0.com/blog](https://auth0.com/blog/).
 
 It is a REST API built using Scala and [Play Framework](https://playframework.com). It statically serves blog posts and comments from two endpoints. The endpoints are secured using access tokens issued by [auth0.com](https://auth0.com). In order to successfully call the endpoints and retrieve data, the request must supply a valid JWT bearer token in the `Authorization` header. Otherwise, a `401 Unauthorized` response is returned.
 
