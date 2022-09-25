@@ -1,13 +1,27 @@
 package auth
 
 import com.auth0.jwk.UrlJwkProvider
-import javax.inject.Inject
+import com.google.inject.ImplementedBy
 import pdi.jwt.{JwtAlgorithm, JwtBase64, JwtClaim, JwtJson}
 import play.api.Configuration
 
+import java.time.{Clock, ZoneId}
+import javax.inject.{Inject, Provider, Singleton}
 import scala.util.{Failure, Success, Try}
 
-class AuthService @Inject()(config: Configuration) {
+@ImplementedBy(classOf[UTCClock])
+trait ClockProvider extends Provider[Clock] {
+  val get: Clock
+}
+
+@Singleton
+class UTCClock extends ClockProvider {
+  lazy val get: Clock = Clock.system(ZoneId.of("Etc/UTC"))
+}
+
+class AuthService @Inject()(config: Configuration, clockProvider: ClockProvider) {
+
+  implicit val clock: Clock = clockProvider.get
 
   // A regex that defines the JWT pattern and allows us to
   // extract the header, claims and signature
@@ -15,14 +29,16 @@ class AuthService @Inject()(config: Configuration) {
 
   // Your Auth0 domain, read from configuration
   private def domain = config.get[String]("auth0.domain")
+
   private def audience = config.get[String]("auth0.audience")
+
   private def issuer = s"https://$domain/"
 
   // Validates a JWT and potentially returns the claims if the token was successfully parsed
   def validateJwt(token: String): Try[JwtClaim] = for {
-    jwk <- getJwk(token)           // Get the secret key for this token
-    claims <- JwtJson.decode(token, jwk.getPublicKey, Seq(JwtAlgorithm.RS256)) // Decode the token using the secret key
-    _ <- validateClaims(claims)     // validate the data stored inside the token
+    jwk <- getJwk(token) // Get the secret key for this token
+    claims <- JwtJson(clock).decode(token, jwk.getPublicKey, Seq(JwtAlgorithm.RS256)) // Decode the token using the secret key
+    _ <- validateClaims(claims) // validate the data stored inside the token
   } yield claims
 
   // Splits a JWT into it's 3 component parts
@@ -41,7 +57,7 @@ class AuthService @Inject()(config: Configuration) {
   private val getJwk = (token: String) =>
     (splitToken andThen decodeElements) (token) flatMap {
       case (header, _, _) =>
-        val jwtHeader = JwtJson.parseHeader(header)     // extract the header
+        val jwtHeader = JwtJson.parseHeader(header) // extract the header
         val jwkProvider = new UrlJwkProvider(s"https://$domain")
 
         // Use jwkProvider to load the JWKS data and return the JWK
@@ -54,8 +70,8 @@ class AuthService @Inject()(config: Configuration) {
   // issuer and audience fields.
   private val validateClaims = (claims: JwtClaim) =>
     if (claims.isValid(issuer, audience)) {
-    Success(claims)
-  } else {
-    Failure(new Exception("The JWT did not pass validation"))
-  }
+      Success(claims)
+    } else {
+      Failure(new Exception("The JWT did not pass validation"))
+    }
 }
